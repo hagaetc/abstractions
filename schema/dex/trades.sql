@@ -116,7 +116,7 @@ WITH rows AS (
             t.evt_block_time AS block_time,
             'Uniswap' AS project,
             '2' AS version,
-            sender AS trader_a,
+            users."to" AS trader_a,
             NULL::bytea AS trader_b,
             CASE WHEN "amount0Out" = 0 THEN "amount1Out" ELSE "amount0Out" END AS token_a_amount_raw,
             CASE WHEN "amount0In" = 0 THEN "amount1In" ELSE "amount0In" END AS token_b_amount_raw,
@@ -130,6 +130,39 @@ WITH rows AS (
         FROM
             uniswap_v2."Pair_evt_Swap" t
         INNER JOIN uniswap_v2."Factory_evt_PairCreated" f ON f.pair = t.contract_address
+        INNER JOIN (
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapETHForExactTokens"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapExactETHForTokens"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapExactETHForTokensSupportingFeeOnTransferToken"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapExactTokensForETH"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapExactTokensForETHSupportingFeeOnTransferToken"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapExactTokensForTokens"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapExactTokensForTokensSupportingFeeOnTransferTo"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapTokensForExactETH"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router02_call_swapTokensForExactTokens"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router01_call_swapETHForExactTokens"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router01_call_swapExactETHForTokens"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router01_call_swapExactTokensForETH"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router01_call_swapExactTokensForTokens"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router01_call_swapTokensForExactETH"
+                    UNION ALL
+                    SELECT "to", call_tx_hash FROM uniswap_v2."Router01_call_swapTokensForExactTokens"
+                    UNION ALL
+                    SELECT "to", evt_tx_hash AS call_tx_hash FROM uniswap_v2."Pair_evt_Swap"
+                    ) users ON users.call_tx_hash = t.evt_tx_hash 
         WHERE t.contract_address != '\xed9c854cb02de75ce4c9bba992828d6cb7fd5c71' --Remove WETH-UBOMB wash trading pair
 
         UNION
